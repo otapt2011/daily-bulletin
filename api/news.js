@@ -38,7 +38,7 @@ async function edgeHandler(request, env) {
       return new Response(JSON.stringify(item), { status: 200, headers: { 'content-type': 'application/json' } });
     }
 
-    // Protected routes
+    // Protected routes - require admin JWT
     const user = await verifyAuth(request, env);
     if (!user) return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401, headers: { 'content-type': 'application/json' } });
 
