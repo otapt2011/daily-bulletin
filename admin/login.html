@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Login — Daily Bulletin</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-..." crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1 class="site-title">Admin</h1>
+    </div>
+  </header>
+
+  <main>
+    <form id="login-form" class="form">
+      <label>
+        <i class="fa-solid fa-user" aria-hidden="true"></i>
+        <input id="username" name="username" placeholder="Username" required>
+      </label>
+      <label>
+        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+        <input id="password" name="password" type="password" placeholder="Password" required>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="btn primary"><i class="fa-solid fa-right-to-bracket"></i> Sign in</button>
+      </div>
+
+      <div id="login-error" class="form-error" role="alert" aria-live="assertive"></div>
+    </form>
+  </main>
+
+  <footer>
+    <nav class="tabbar" role="tablist" aria-label="Admin">
+      <a href="/admin/login.html" class="tab active" role="tab"><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span class="visually-hidden">Admin</span></a>
+    </nav>
+  </footer>
+
+  <script src="../js/modules/api.js"></script>
+  <script src="../js/modules/auth.js"></script>
+  <script>
+    (function () {
+      const form = document.getElementById('login-form');
+      const errorEl = document.getElementById('login-error');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errorEl.textContent = '';
+        const username = form.username.value.trim();
+        const password = form.password.value;
+
+        try {
+          const res = await window.AUTH.signIn({ username, password });
+          if (res.ok) {
+            location.href = '/admin/dashboard.html';
+          } else {
+            const data = await res.json();
+            errorEl.textContent = data?.message || 'Login failed';
+          }
+        } catch (err) {
+          errorEl.textContent = 'Network error';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
