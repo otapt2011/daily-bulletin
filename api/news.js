@@ -23,7 +23,14 @@ async function verifyAuth(request, env) {
 async function edgeHandler(request, env) {
   const url = new URL(request.url);
   const parts = url.pathname.replace(/^\/+|\/+$/g, '').split('/');
-  const id = parts.length >= 2 ? parts[1] : null;
+
+  // Robustly detect an "id" only when the path contains a 'news' segment followed by another segment.
+  // This supports both /api/news/:id and /news/:id patterns and avoids treating '/api/news' itself as an id.
+  let id = null;
+  const newsIndex = parts.indexOf('news');
+  if (newsIndex !== -1 && parts.length > newsIndex + 1) {
+    id = decodeURIComponent(parts[newsIndex + 1]);
+  }
 
   try {
     if (request.method === 'GET' && !id) {
