@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Dashboard — Daily Bulletin</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-..." crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1 class="site-title">Dashboard</h1>
+      <nav class="header-actions">
+        <button id="btn-logout" class="icon-btn"><i class="fa-solid fa-right-from-bracket"></i></button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="dashboard-actions">
+      <a href="edit.html" class="btn primary"><i class="fa-solid fa-plus"></i> Add article</a>
+    </div>
+
+    <section id="admin-list" class="admin-list">
+      <!-- populated by JS -->
+    </section>
+  </main>
+
+  <footer>
+    <nav class="tabbar" role="tablist" aria-label="Admin">
+      <a href="/admin/dashboard.html" class="tab active" role="tab"><i class="fa-solid fa-table-list"></i><span class="visually-hidden">List</span></a>
+    </nav>
+  </footer>
+
+  <script src="../js/modules/api.js"></script>
+  <script src="../js/modules/auth.js"></script>
+  <script src="../js/modules/ui.js"></script>
+  <script>
+    (function () {
+      async function load() {
+        if (!window.AUTH.isAuthenticated()) {
+          location.href = '/admin/login.html';
+          return;
+        }
+
+        const res = await window.API.get('/api/news');
+        if (!res.ok) {
+          document.getElementById('admin-list').textContent = 'Failed to load';
+          return;
+        }
+        const items = await res.json();
+        window.UI.renderAdminList(items, '#admin-list');
+      }
+
+      document.getElementById('btn-logout').addEventListener('click', () => {
+        window.AUTH.signOut();
+        location.href = '/';
+      });
+
+      load();
+    })();
+  </script>
+</body>
+</html>
