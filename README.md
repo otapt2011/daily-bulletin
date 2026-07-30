@@ -1,74 +1,41 @@
-# Daily Bulletin
+# Daily Bulletin — Cloudflare Workers migration
 
-A lightweight static news website with a minimal admin dashboard. Frontend is pure HTML/CSS/JS (IIFE modules); backend APIs are Vercel Edge Functions that execute SQL against a Cloudflare D1 database via the D1 REST API.
+This repository has been migrated to run API logic on Cloudflare Workers (D1) and serve static assets from Vercel.
 
-Contents added to this repository:
-- Static frontend: index.html, article.html, admin/*.html, css/, js/
-- Vercel Edge functions: api/*.js (api/news.js, api/auth.js) using api/lib/d1-client.js
-- Cloudflare D1 migrations: migrations/schema.sql, migrations/seed.sql
-- User seed script: migrations/users.js
+Key changes made in this commit:
 
-Quick setup
------------
-1. Set environment variables (Vercel project settings or local .env for testing):
-   - D1_REST_URL (see .env.example)
-   - D1_AUTH (Cloudflare API token with D1 permissions)
-   - JWT_SECRET (random secret used to sign HS256 JWTs)
+- Added workers/worker-api.js — a Cloudflare Worker implementation of the API (D1 binding name: DB).
+  - Public routes: GET /api/news, GET /api/news/:id, GET /api/db-check
+  - Admin routes (protected by ADMIN_TOKEN): POST/PUT/DELETE /api/news
+  - Seed endpoint: POST /api/seed (idempotent)
+- Added workers/wrangler.toml as a deployment example for Wrangler.
+- Cleared package.json (project no longer depends on Node/npm tools for runtime).
 
-2. Apply database schema and sample data (example using curl + jq):
+What you need to do next (mobile-friendly):
 
-   # Export the REST endpoint and token locally (replace with your token)
-   export D1_REST_URL="https://api.cloudflare.com/client/v4/accounts/5b1bd000cd4af0cedf95a25940a8d53f/d1/database/50cf4075-3383-4700-9dae-736c308e419f/queries"
-   export D1_AUTH="<YOUR_CLOUDFLARE_API_TOKEN>"
+1) Bind the D1 database to the Worker
+   - Open Cloudflare dashboard → Workers → your Worker → Settings → Add binding (D1)
+   - Variable name: DB
+   - Select the correct account and the database you want to use (e.g. 50cf4075-...)
 
-   # Run schema (requires jq to safely wrap SQL)
-   SQL=$(jq -Rs . migrations/schema.sql)
-   curl -s -X POST "$D1_REST_URL" \
-     -H "Authorization: Bearer $D1_AUTH" \
-     -H "Content-Type: application/json" \
-     -d "{\"sql\":$SQL,\"params\":[] }"
+2) Set ADMIN_TOKEN (optional but recommended)
+   - In the Worker Settings add a Variable: ADMIN_TOKEN
+   - Set it to a long random value. This token must be sent in the Authorization header as
+     "Bearer <ADMIN_TOKEN>" for POST/PUT/DELETE endpoints that modify data.
 
-   # Run seed (sample articles)
-   SQL=$(jq -Rs . migrations/seed.sql)
-   curl -s -X POST "$D1_REST_URL" \
-     -H "Authorization: Bearer $D1_AUTH" \
-     -H "Content-Type: application/json" \
-     -d "{\"sql\":$SQL,\"params\":[] }"
+3) Deploy the Worker via Cloudflare dashboard or Wrangler.
 
-3. Create an admin user (recommended: use the Node seeding helper which hashes the password):
+4) Verify the API from your static site (Vercel) or mobile browser:
+   - GET https://<your-worker-url>/api/db-check  -> diagnostics
+   - GET https://<your-worker-url>/api/news      -> list articles
+   - GET https://<your-worker-url>/api/news/a1   -> fetch specific article
+   - POST https://<your-worker-url>/api/seed     -> seed tables and sample articles (idempotent)
 
-   # Install dependencies locally if you haven't already
-   npm install
+Notes about authentication and admin users
+- To keep this migration Node-free, the Worker uses a simple ADMIN_TOKEN environment variable to
+  authenticate admin operations. If you prefer to keep the original bcrypt-based auth, we can add
+  a separate Worker route that expects precomputed bcrypt hashes inserted into the D1 users table,
+  but that requires a compatible bcrypt implementation at runtime or precomputing hashes.
 
-   # Create admin user (example: username=admin password=changeme)
-   D1_REST_URL="$D1_REST_URL" D1_AUTH="$D1_AUTH" npm run seed:user -- admin changeme
-
-   # After first successful login, change the password and remove/restrict the migration script.
-
-4. Configure Vercel environment variables
-   Add the same variables to your Vercel project (Project Settings → Environment Variables):
-   - D1_REST_URL
-   - D1_AUTH
-   - JWT_SECRET
-
-5. Deploy
-   - Locally: vercel dev
-   - Production: git push to main (already configured), then deploy from Vercel dashboard or via vercel CLI.
-
-Security notes
---------------
-- DO NOT commit secrets into the repository. Use .env.example for reference only.
-- Restrict the Cloudflare API token (D1_AUTH) to the minimum required D1 permissions.
-- Rotate JWT_SECRET periodically and ensure tokens are short-lived.
-- Remove or restrict migration and seeding scripts after initial setup.
-
-Files added/updated by this commit
-----------------------------------
-- .env.example (this file)
-- README.md (this file)
-- .gitignore
-- package.json (added npm script `seed:user`)
-
-If you want, I can also:
-- Add a short CI workflow to prevent committing secrets.
-- Add a wrangler.toml and worker script if you prefer Cloudflare Workers + D1 binding instead of Vercel.
+If you want me to also update the static admin pages to use the ADMIN_TOKEN authentication flow,
+I can commit those changes next. Reply with "Update admin UI for token auth" to proceed.

@@ -1,13 +1,6 @@
-name = "daily-bulletin-worker"
-main = "workers/worker-d1-binding.js"
-compatibility_date = "2024-01-01"
+name: daily-bulletin-worker
+main: workers/worker-api.js
+compatibility_date = "2026-01-01"
 
-# Replace the following account_id with your Cloudflare account id
-account_id = "5b1bd000cd4af0cedf95a25940a8d53f"
-workers_dev = true
-
-[[d1_databases]]
-# The binding name exposed to the worker as `env.DB`
-binding = "DB"
-# Use the database id or name as configured in your Cloudflare account
-database_name = "50cf4075-3383-4700-9dae-736c308e419f"
+# Bindings — when deploying in Cloudflare dashboard, bind the D1 database to the variable name "DB"
+# and set an environment variable ADMIN_TOKEN to protect admin operations.

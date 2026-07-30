@@ -1,14 +1,4 @@
 {
   "name": "daily-bulletin",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "jose": "^5.0.0",
-    "bcryptjs": "^2.4.3"
-  },
-  "scripts": {
-    "dev": "vercel dev",
-    "seed:user": "node migrations/users.js"
-  }
+  "private": true
 }
