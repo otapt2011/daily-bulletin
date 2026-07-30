@@ -1,8 +1,10 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "api/*.js", "use": "@vercel/edge" }
-  ],
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "edge"
+    }
+  },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
     { "src": "/(.*)", "headers": { "cache-control": "s-maxage=60, stale-while-revalidate=120" }, "dest": "/$1" }
