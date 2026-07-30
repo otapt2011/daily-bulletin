@@ -1,6 +1,9 @@
-// Cloudflare Worker that proxies SQL queries to Cloudflare D1 REST API.
-// Useful if you cannot bind D1 directly. Requires env.D1_REST_URL and env.D1_AUTH.
-// Uses env.JWT_SECRET for admin JWT verification.
+// workers/worker-rest-proxy.js
+// Cloudflare Worker that proxies SQL queries to the Cloudflare D1 REST API.
+// Requires the following environment variables set for the Worker:
+//   D1_REST_URL - the REST endpoint for your D1 database (example in .env.example)
+//   D1_AUTH - a Cloudflare API token that can run D1 queries
+// JWT HS256 verification uses env.JWT_SECRET
 
 async function jsonResponse(obj, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } });
@@ -22,18 +25,18 @@ async function verifyHS256(token, secret) {
   const data = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
   const sig = base64UrlToUint8Array(sigB64);
 
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['verify']
-  );
-  const valid = await crypto.subtle.verify('HMAC', key, sig, data);
-  if (!valid) return null;
   try {
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify']
+    );
+    const valid = await crypto.subtle.verify('HMAC', key, sig, data);
+    if (!valid) return null;
     return JSON.parse(new TextDecoder().decode(base64UrlToUint8Array(payloadB64)));
-  } catch {
+  } catch (e) {
     return null;
   }
 }
@@ -76,6 +79,7 @@ export default {
       }
 
       // Admin - require JWT
+      if (!request.headers.has('authorization')) return jsonResponse({ message: 'Unauthorized' }, 401);
       const auth = request.headers.get('authorization') || '';
       const tokenMatch = auth.match(/^Bearer (.+)$/);
       if (!tokenMatch) return jsonResponse({ message: 'Unauthorized' }, 401);
