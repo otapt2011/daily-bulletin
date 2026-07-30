@@ -8,6 +8,7 @@
     "bcryptjs": "^2.4.3"
   },
   "scripts": {
-    "dev": "vercel dev"
+    "dev": "vercel dev",
+    "seed:user": "node migrations/users.js"
   }
 }
