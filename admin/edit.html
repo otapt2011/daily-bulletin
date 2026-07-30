@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Edit Article — Daily Bulletin</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-..." crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <a href="dashboard.html" class="icon-btn back"><i class="fa-solid fa-arrow-left"></i></a>
+      <h1 class="site-title">Edit</h1>
+    </div>
+  </header>
+
+  <main>
+    <form id="edit-form" class="form">
+      <input id="id" type="hidden">
+      <label>
+        <i class="fa-solid fa-heading" aria-hidden="true"></i>
+        <input id="title" placeholder="Title" required>
+      </label>
+      <label>
+        <i class="fa-solid fa-align-left" aria-hidden="true"></i>
+        <textarea id="body" rows="8" placeholder="Article body" required></textarea>
+      </label>
+      <label>
+        <i class="fa-brands fa-youtube" aria-hidden="true"></i>
+        <input id="embed" placeholder="YouTube or TikTok embed URL (optional)">
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="btn primary"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+      </div>
+      <div id="edit-error" class="form-error" role="alert" aria-live="assertive"></div>
+    </form>
+  </main>
+
+  <footer>
+    <nav class="tabbar" role="tablist" aria-label="Admin">
+      <a href="/admin/dashboard.html" class="tab" role="tab"><i class="fa-solid fa-table-list"></i><span class="visually-hidden">List</span></a>
+    </nav>
+  </footer>
+
+  <script src="../js/modules/api.js"></script>
+  <script src="../js/modules/auth.js"></script>
+  <script src="../js/modules/embed.js"></script>
+  <script>
+    (function () {
+      if (!window.AUTH.isAuthenticated()) {
+        location.href = '/admin/login.html';
+        return;
+      }
+
+      const form = document.getElementById('edit-form');
+      const params = new URLSearchParams(location.search);
+      const id = params.get('id');
+
+      async function load() {
+        if (id) {
+          const res = await window.API.get('/api/news/' + encodeURIComponent(id));
+          if (res.ok) {
+            const data = await res.json();
+            document.getElementById('id').value = data.id;
+            document.getElementById('title').value = data.title;
+            document.getElementById('body').value = data.body;
+            document.getElementById('embed').value = data.embed || '';
+          }
+        }
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+          id: document.getElementById('id').value || undefined,
+          title: document.getElementById('title').value.trim(),
+          body: document.getElementById('body').value.trim(),
+          embed: document.getElementById('embed').value.trim() || null
+        };
+
+        const res = payload.id ? await window.API.put('/api/news/' + payload.id, payload) : await window.API.post('/api/news', payload);
+        if (res.ok) {
+          location.href = '/admin/dashboard.html';
+        } else {
+          const data = await res.json();
+          document.getElementById('edit-error').textContent = data?.message || 'Save failed';
+        }
+      });
+
+      load();
+    })();
+  </script>
+</body>
+</html>
