@@ -1,14 +1,6 @@
 // workers/worker-api.js
-// Cloudflare Worker router implementing the API for Daily Bulletin using D1 (binding name: DB).
-// Public endpoints:
-//   GET  /api/news             -> list articles (id, title, published_at)
-//   GET  /api/news/:id         -> get full article by id
-//   GET  /api/db-check         -> diagnostics (tables, sample rows)
-//   POST /api/seed             -> idempotent seed (creates tables + sample articles)
-// Admin endpoints (protected by ADMIN_TOKEN env variable):
-//   POST /api/news             -> create or replace an article (JSON body includes id,title,body,embed,published_at)
-//   PUT  /api/news/:id         -> update article
-//   DELETE /api/news/:id       -> delete article
+// Cloudflare Worker router implementing the API for Daily Bulletin using D1 (binding name: DB or DB_NEWS_BULLETIN).
+// Adds CORS support and OPTIONS preflight handling so the static site can fetch the API from a different origin.
 
 export default {
   async fetch(request, env) {
@@ -16,17 +8,46 @@ export default {
     const path = url.pathname.replace(/\/+$/, '');
     const method = request.method.toUpperCase();
 
+    // CORS headers (allowing cross-origin access). You can restrict Access-Control-Allow-Origin to your site.
+    const corsHeaders = {
+      'content-type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    };
+
     function json(body, status = 200) {
-      return new Response(JSON.stringify(body, null, 2), { status, headers: { 'content-type': 'application/json' } });
+      return new Response(JSON.stringify(body, null, 2), { status, headers: corsHeaders });
+    }
+
+    // Preflight
+    if (method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: corsHeaders });
+    }
+
+    // Resolve D1 binding: prefer env.DB, fallback to env.DB_NEWS_BULLETIN, then any DB_* binding.
+    const DB = env.DB || env.DB_NEWS_BULLETIN || (() => {
+      try {
+        for (const k of Object.keys(env)) {
+          if (/^DB(_|$)/.test(k) && env[k] && typeof env[k].prepare === 'function') return env[k];
+        }
+      } catch (e) {
+        // ignore
+      }
+      return undefined;
+    })();
+
+    if (!DB) {
+      return json({ ok: false, message: 'D1 binding not found. Available bindings: ' + Object.keys(env).join(',') }, 500);
     }
 
     async function queryAll(sql, params = []) {
-      const r = await env.DB.prepare(sql).all(...params);
+      const r = await DB.prepare(sql).all(...params);
       return (r && r.results) || [];
     }
 
     async function run(sql, params = []) {
-      return await env.DB.prepare(sql).run(...params);
+      return await DB.prepare(sql).run(...params);
     }
 
     function requireAdmin(req) {
